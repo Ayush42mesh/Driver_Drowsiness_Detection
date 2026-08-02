@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "frontend": "npm --prefix frontend run dev",
-    "backend": "python web_app.py"
+    "backend": "python web_app.py",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build"
   }
 }
