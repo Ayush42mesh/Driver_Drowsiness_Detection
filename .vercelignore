@@ -1,0 +1,17 @@
+# Ignore all Python backend files so Vercel only builds the frontend
+app.py
+gui.py
+web_app.py
+webcam.py
+predictor.py
+model_loader.py
+face_detector.py
+utils.py
+config.py
+model/
+alarm/
+logs/
+screenshots/
+requirements.txt
+.python-version
+Dockerfile
