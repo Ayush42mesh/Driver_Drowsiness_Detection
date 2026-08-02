@@ -83,3 +83,6 @@ You can change configurations on the **Settings Page** within the application, o
 - **Consecutive Alarm Trigger Frames**: The number of consecutive frames indicating drowsiness required before triggering the alarm sound (default is `15`).
 - **Alarm Volume Level**: Adjust sliding bar from `0%` to `100%`.
 - **UI Color Theme**: Toggle between `Dark` and `Light` themes instantly.
+
+---
+*Deployed on Vercel (Frontend) and Render (Backend).*
