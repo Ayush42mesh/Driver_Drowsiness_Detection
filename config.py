@@ -26,7 +26,7 @@ class Config:
         self.screenshots_dir = os.path.join(self.base_dir, "screenshots")
         
         # Model path
-        self.model_path = r"C:\Users\Ayush Meshram\.gemini\antigravity-ide\scratch\DDD\model\DDD.keras"
+        self.model_path = os.path.join(self.model_dir, "DDD.keras")
         self.alarm_path = os.path.join(self.alarm_dir, "alarm.wav")
         
         self.load()
