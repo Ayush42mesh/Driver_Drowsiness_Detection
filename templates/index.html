@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDD - Driver Drowsiness Detection</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #131c2e;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --border-card: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --font-main: 'Inter', sans-serif;
+            --font-heading: 'Outfit', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e1b4b, #0f172a);
+            border-bottom: 1px solid var(--border-card);
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section h1 {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #60a5fa, #3b82f6, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-section span {
+            font-size: 0.8rem;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: var(--font-main);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .status-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-card);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+        }
+
+        .status-indicator.active {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+
+        .status-indicator.drowsy {
+            background-color: var(--accent-amber);
+            box-shadow: 0 0 10px var(--accent-amber);
+        }
+
+        .status-indicator.alarm {
+            background-color: var(--accent-red);
+            box-shadow: 0 0 15px var(--accent-red);
+            animation: pulse-red 1s infinite alternate;
+        }
+
+        @keyframes pulse-red {
+            from { transform: scale(1); opacity: 0.6; }
+            to { transform: scale(1.3); opacity: 1; }
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .dashboard-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            transition: border-color 0.3s ease;
+        }
+
+        .card.alert-active {
+            border-color: rgba(239, 68, 68, 0.4);
+            animation: border-glow-red 1.5s infinite alternate;
+        }
+
+        @keyframes border-glow-red {
+            from { box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); }
+            to { box-shadow: 0 4px 30px rgba(239, 68, 68, 0.2); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-title {
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 1.15rem;
+            color: var(--text-primary);
+        }
+
+        /* Camera Stream Section */
+        .video-container {
+            position: relative;
+            background-color: #05070c;
+            border-radius: 12px;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #camera-canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .camera-placeholder-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-family: var(--font-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background-color: var(--accent-red);
+        }
+
+        .btn-success {
+            background-color: var(--accent-green);
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            border: 1px solid var(--border-card);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Controls Block */
+        .camera-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* Alert Panel banner */
+        .alarm-banner {
+            background: linear-gradient(135deg, #7f1d1d, #ef4444);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            animation: pulse-bg 1s infinite alternate;
+        }
+
+        @keyframes pulse-bg {
+            from { box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+            to { box-shadow: 0 4px 25px rgba(239, 68, 68, 0.6); }
+        }
+
+        .alarm-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .alarm-icon {
+            font-size: 2rem;
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            20% { transform: rotate(-8deg); }
+            40% { transform: rotate(8deg); }
+            60% { transform: rotate(-8deg); }
+            80% { transform: rotate(8deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .alarm-text h3 {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .alarm-text p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* Metrics grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .metric-value {
+            font-family: var(--font-heading);
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        /* Consecutive Progress bar */
+        .progress-container {
+            margin-top: 1rem;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+        }
+
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.05);
+            height: 10px;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, var(--accent-blue), var(--accent-amber));
+            border-radius: 9999px;
+            transition: width 0.15s ease;
+        }
+
+        .progress-bar-fill.critical {
+            background: linear-gradient(to right, var(--accent-amber), var(--accent-red));
+        }
+
+        /* Sidebar Settings & Logs */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-control label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-control input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-blue);
+        }
+
+        .form-control input[type="text"] {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            color: white;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+        }
+
+        .range-values {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .history-list {
+            max-height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            padding-right: 0.4rem;
+        }
+
+        .history-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .history-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid var(--accent-blue);
+            padding: 0.6rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item.drowsy {
+            border-left-color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.03);
+        }
+
+        .history-item-info h4 {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .history-item-info p {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-top: 0.1rem;
+        }
+
+        .history-item-score {
+            font-weight: 700;
+            font-family: var(--font-heading);
+        }
+
+        .history-item-score.drowsy {
+            color: var(--accent-red);
+        }
+
+        .history-item-score.active {
+            color: var(--accent-green);
+        }
+
+        .no-data-msg {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 1.5rem 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <h1>DDD Driver Monitor <span>v2.0 Web</span></h1>
+        </div>
+        <div class="header-stats">
+            <div class="status-pill">
+                Model: 
+                <span id="model-status-text" style="font-weight: 700;">Loading...</span>
+            </div>
+            <div class="status-pill">
+                State: 
+                <div id="state-indicator" class="status-indicator"></div>
+                <span id="state-text">OFF</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="dashboard-content">
+            <!-- Alarm Banner -->
+            <div class="alarm-banner" id="alarm-banner">
+                <div class="alarm-info">
+                    <span class="alarm-icon">🚨</span>
+                    <div class="alarm-text">
+                        <h3>Drowsiness Detected!</h3>
+                        <p>High consecutive drowsiness count. Stop driving and take a rest.</p>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="btn-silence">Silence Alarm</button>
+            </div>
+
+            <div class="dashboard-row">
+                <!-- Camera view -->
+                <div class="card" id="camera-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Live Camera Stream</h2>
+                        <span id="fps-display" style="font-size: 0.8rem; color: var(--text-secondary);">FPS: --</span>
+                    </div>
+                    <div class="video-container">
+                        <canvas id="camera-canvas"></canvas>
+                        <!-- Webcam tag hidden from UI, frames captured and rendered on canvas -->
+                        <video id="webcam-raw" style="display:none;" autoplay playsinline></video>
+                        <div class="camera-overlay" id="camera-overlay">
+                            <span style="font-size: 3rem;">📷</span>
+                            <div class="camera-placeholder-text">Camera stream is inactive.</div>
+                            <button class="btn btn-success" id="btn-start-stream">Start Monitor</button>
+                        </div>
+                    </div>
+                    <div class="camera-controls">
+                        <button class="btn btn-secondary" id="btn-stop-stream" disabled>Stop Monitor</button>
+                        <button class="btn btn-secondary" id="btn-take-shot">Take Screenshot</button>
+                    </div>
+                </div>
+
+                <!-- Live Telemetry -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Real-Time Telemetry</h2>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Prediction</div>
+                            <div class="metric-value" id="val-prediction">--</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Confidence</div>
+                            <div class="metric-value" id="val-confidence">--</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-header">
+                            <span>Consecutive Drowsy Count</span>
+                            <span id="consecutive-count-text">0 / 15</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="consecutive-progress"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container" style="margin-top: 1.5rem;">
+                        <span class="metric-label" style="display:block; margin-bottom: 0.5rem;">Real-time Drowsiness Index</span>
+                        <div style="height: 160px; position: relative;">
+                            <canvas id="live-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar (Settings & Logs) -->
+        <div class="sidebar">
+            <!-- Settings Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">System Settings</h2>
+                </div>
+                <div class="settings-group">
+                    <div class="form-control">
+                        <label for="setting-threshold">Confidence Threshold</label>
+                        <input type="range" id="setting-threshold" min="0.1" max="0.9" step="0.05" value="0.5">
+                        <div class="range-values">
+                            <span>0.1 (Strict)</span>
+                            <span id="val-threshold-display">0.5</span>
+                            <span>0.9 (Lenient)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-control">
+                        <label for="setting-frames">Consecutive Frames Alert Limit</label>
+                        <input type="range" id="setting-frames" min="5" max="30" step="1" value="15">
+                        <div class="range-values">
+                            <span>5 frames</span>
+                            <span id="val-frames-display">15</span>
+                            <span>30 frames</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-control">
+                        <label for="setting-volume">Alarm Volume</label>
+                        <input type="range" id="setting-volume" min="0.0" max="1.0" step="0.1" value="0.8">
+                        <div class="range-values">
+                            <span>Mute</span>
+                            <span id="val-volume-display">80%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label for="setting-model-path">Model Path</label>
+                        <input type="text" id="setting-model-path" value="C:\Users\Ayush Meshram\DDD.keras">
+                    </div>
+
+                    <button class="btn btn-secondary" id="btn-save-settings" style="width: 100%; justify-content: center; font-size: 0.9rem;">Save Settings</button>
+                </div>
+            </div>
+
+            <!-- Log Entries -->
+            <div class="card" style="flex: 1; min-height: 300px;">
+                <div class="card-header">
+                    <h2 class="card-title">Drowsiness Logs</h2>
+                    <button class="btn btn-secondary" id="btn-refresh-logs" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">Refresh</button>
+                </div>
+                <div class="history-list" id="logs-container">
+                    <div class="no-data-msg">No logs recorded yet.</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Web Audio element -->
+    <audio id="alarm-audio" src="/alarm/alarm.wav" loop></audio>
+
+    <script>
+        // DOM Elements
+        const webcamRaw = document.getElementById('webcam-raw');
+        const cameraCanvas = document.getElementById('camera-canvas');
+        const canvasCtx = cameraCanvas.getContext('2d');
+        const cameraOverlay = document.getElementById('camera-overlay');
+        const btnStartStream = document.getElementById('btn-start-stream');
+        const btnStopStream = document.getElementById('btn-stop-stream');
+        const btnTakeShot = document.getElementById('btn-take-shot');
+        const btnSilence = document.getElementById('btn-silence');
+        const fpsDisplay = document.getElementById('fps-display');
+        const modelStatusText = document.getElementById('model-status-text');
+        const stateIndicator = document.getElementById('state-indicator');
+        const stateText = document.getElementById('state-text');
+        const valPrediction = document.getElementById('val-prediction');
+        const valConfidence = document.getElementById('val-confidence');
+        const consecutiveCountText = document.getElementById('consecutive-count-text');
+        const consecutiveProgress = document.getElementById('consecutive-progress');
+        const alarmBanner = document.getElementById('alarm-banner');
+        const cameraCard = document.getElementById('camera-card');
+        const alarmAudio = document.getElementById('alarm-audio');
+        
+        // Settings elements
+        const settingThreshold = document.getElementById('setting-threshold');
+        const settingFrames = document.getElementById('setting-frames');
+        const settingVolume = document.getElementById('setting-volume');
+        const settingModelPath = document.getElementById('setting-model-path');
+        const btnSaveSettings = document.getElementById('btn-save-settings');
+        const valThresholdDisplay = document.getElementById('val-threshold-display');
+        const valFramesDisplay = document.getElementById('val-frames-display');
+        const valVolumeDisplay = document.getElementById('val-volume-display');
+        
+        // Log elements
+        const btnRefreshLogs = document.getElementById('btn-refresh-logs');
+        const logsContainer = document.getElementById('logs-container');
+
+        // Streaming Variables
+        let localStream = null;
+        let streamInterval = null;
+        let isStreaming = false;
+        let processingFrame = false;
+        let fpsCounter = 0;
+        let lastFpsTime = Date.now();
+        
+        // Chart variables
+        let chart = null;
+        const chartDataPoints = 30;
+        const chartLabels = Array(chartDataPoints).fill('');
+        const chartValues = Array(chartDataPoints).fill(0);
+
+        // Init Chart.js
+        function initChart() {
+            const ctx = document.getElementById('live-chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Drowsiness Index',
+                        data: chartValues,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            min: 0,
+                            max: 1.0,
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 9 }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.04)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(value) {
+            chartValues.push(value);
+            chartValues.shift();
+            chart.update();
+        }
+
+        // Live Audio alarm handler
+        function setAlarmAudioVolume(val) {
+            alarmAudio.volume = val;
+        }
+
+        // Access and load application configurations
+        async function fetchSettings() {
+            try {
+                const res = await fetch('/get_settings');
+                const data = await res.json();
+                
+                // Update UI settings values
+                settingThreshold.value = data.confidence_threshold;
+                valThresholdDisplay.innerText = data.confidence_threshold;
+                
+                settingFrames.value = data.consecutive_frames;
+                valFramesDisplay.innerText = data.consecutive_frames;
+                
+                settingVolume.value = data.alarm_volume;
+                valVolumeDisplay.innerText = Math.round(data.alarm_volume * 100) + '%';
+                setAlarmAudioVolume(data.alarm_volume);
+                
+                settingModelPath.value = data.model_path;
+
+                // Set model load text banner
+                if (data.model_loaded) {
+                    modelStatusText.innerText = "Loaded";
+                    modelStatusText.style.color = "var(--accent-green)";
+                } else if (data.is_demo_mode) {
+                    modelStatusText.innerText = "Demo Mode";
+                    modelStatusText.style.color = "var(--accent-amber)";
+                } else {
+                    modelStatusText.innerText = "Disconnected";
+                    modelStatusText.style.color = "var(--accent-red)";
+                }
+            } catch (err) {
+                console.error("Failed to load settings:", err);
+            }
+        }
+
+        // Settings change events UI visual binding
+        settingThreshold.addEventListener('input', (e) => {
+            valThresholdDisplay.innerText = e.target.value;
+        });
+        settingFrames.addEventListener('input', (e) => {
+            valFramesDisplay.innerText = e.target.value;
+        });
+        settingVolume.addEventListener('input', (e) => {
+            valVolumeDisplay.innerText = Math.round(e.target.value * 100) + '%';
+            setAlarmAudioVolume(e.target.value);
+        });
+
+        // Save Settings to Backend
+        btnSaveSettings.addEventListener('click', async () => {
+            btnSaveSettings.disabled = true;
+            btnSaveSettings.innerText = "Saving...";
+            
+            const payload = {
+                confidence_threshold: parseFloat(settingThreshold.value),
+                consecutive_frames: parseInt(settingFrames.value),
+                alarm_volume: parseFloat(settingVolume.value),
+                model_path: settingModelPath.value
+            };
+
+            try {
+                const res = await fetch('/save_settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert("Settings saved successfully!" + (data.reload_msg ? `\nModel: ${data.reload_msg}` : ""));
+                    fetchSettings();
+                } else {
+                    alert("Error saving settings: " + data.error);
+                }
+            } catch (err) {
+                alert("Failed to save settings: " + err);
+            } finally {
+                btnSaveSettings.disabled = false;
+                btnSaveSettings.innerText = "Save Settings";
+            }
+        });
+
+        // Stop and start video stream interface
+        async function startStream() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, frameRate: { ideal: 20 } }
+                });
+                webcamRaw.srcObject = localStream;
+                isStreaming = true;
+                
+                // Hide overlay, enable/disable buttons
+                cameraOverlay.style.display = 'none';
+                btnStartStream.disabled = true;
+                btnStopStream.disabled = false;
+                
+                // Update system state
+                stateIndicator.className = "status-indicator active";
+                stateText.innerText = "ACTIVE";
+                
+                // Set canvas buffer properties
+                cameraCanvas.width = 640;
+                cameraCanvas.height = 480;
+
+                // Begin stream capture interval (approx 15 FPS -> 66ms)
+                streamInterval = setInterval(sendFrameToBackend, 66);
+            } catch (err) {
+                console.error("Camera access failed:", err);
+                alert("Unable to access camera. Please check browser permissions.");
+            }
+        }
+
+        function stopStream() {
+            isStreaming = false;
+            clearInterval(streamInterval);
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            webcamRaw.srcObject = null;
+            
+            // Show overlay, toggle controls
+            cameraOverlay.style.display = 'flex';
+            btnStartStream.disabled = false;
+            btnStopStream.disabled = true;
+            
+            // Clear telemetry display
+            stateIndicator.className = "status-indicator";
+            stateText.innerText = "OFF";
+            valPrediction.innerText = "--";
+            valConfidence.innerText = "--";
+            fpsDisplay.innerText = "FPS: --";
+            
+            consecutiveCountText.innerText = "0 / --";
+            consecutiveProgress.style.width = '0%';
+            
+            silenceAlarmClient();
+        }
+
+        btnStartStream.addEventListener('click', startStream);
+        btnStopStream.addEventListener('click', stopStream);
+
+        // Frame Processing Loop
+        async function sendFrameToBackend() {
+            if (processingFrame) return; // Skip if previous frame is still resolving
+            processingFrame = true;
+
+            // Draw current webcam frame to canvas buffer
+            canvasCtx.drawImage(webcamRaw, 0, 0, 640, 480);
+            
+            // Extract frame data as base64 jpeg
+            const base64Data = cameraCanvas.toDataURL('image/jpeg', 0.85);
+
+            try {
+                const res = await fetch('/detect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64Data })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Update Canvas display with backend annotated image
+                    const img = new Image();
+                    img.onload = () => {
+                        canvasCtx.drawImage(img, 0, 0, 640, 480);
+                    };
+                    img.src = data.image;
+
+                    // Update live telemetry texts
+                    valPrediction.innerText = data.label;
+                    valConfidence.innerText = Math.round(data.confidence * 100) + '%';
+                    
+                    // Style prediction label
+                    if (data.label === "Drowsy") {
+                        valPrediction.style.color = "var(--accent-red)";
+                    } else if (data.label === "Non Drowsy") {
+                        valPrediction.style.color = "var(--accent-green)";
+                    } else {
+                        valPrediction.style.color = "var(--accent-amber)";
+                    }
+
+                    // Update Consecutive Progress indicator
+                    consecutiveCountText.innerText = `${data.count} / ${data.consecutive_frames_threshold}`;
+                    const percentage = (data.count / data.consecutive_frames_threshold) * 100;
+                    consecutiveProgress.style.width = `${Math.min(100, percentage)}%`;
+                    
+                    if (percentage >= 80) {
+                        consecutiveProgress.className = "progress-bar-fill critical";
+                    } else {
+                        consecutiveProgress.className = "progress-bar-fill";
+                    }
+
+                    // Update Chart Drowsiness Probability value
+                    let probability = 0.0;
+                    if (data.label === "Drowsy") {
+                        probability = data.confidence;
+                    } else if (data.label === "Non Drowsy") {
+                        probability = 1.0 - data.confidence;
+                    }
+                    updateChart(probability);
+
+                    // Handle alarm alert states
+                    if (data.alarm_active) {
+                        triggerAlarmClient();
+                    } else {
+                        silenceAlarmClient();
+                    }
+
+                    // Calculate live processing FPS
+                    fpsCounter++;
+                    const now = Date.now();
+                    if (now - lastFpsTime >= 1000) {
+                        fpsDisplay.innerText = `FPS: ${fpsCounter}`;
+                        fpsCounter = 0;
+                        lastFpsTime = now;
+                    }
+                }
+            } catch (err) {
+                console.error("Frame detection API failed:", err);
+            } finally {
+                processingFrame = false;
+            }
+        }
+
+        // Live Audio & UI Alarm Alert Handlers
+        function triggerAlarmClient() {
+            alarmBanner.style.display = 'flex';
+            cameraCard.className = "card alert-active";
+            stateIndicator.className = "status-indicator alarm";
+            stateText.innerText = "ALARM ACTIVE";
+            
+            // Play alarm sound safely in browser (requires user interaction first)
+            if (alarmAudio.paused) {
+                alarmAudio.play().catch(e => console.log("Audio play delayed waiting for interaction:", e));
+            }
+        }
+
+        function silenceAlarmClient() {
+            alarmBanner.style.display = 'none';
+            cameraCard.className = "card";
+            if (isStreaming) {
+                stateIndicator.className = "status-indicator active";
+                stateText.innerText = "ACTIVE";
+            }
+            
+            if (!alarmAudio.paused) {
+                alarmAudio.pause();
+                alarmAudio.currentTime = 0;
+            }
+        }
+
+        btnSilence.addEventListener('click', async () => {
+            try {
+                // Reset alarm in backend predictor
+                const res = await fetch('/reset_alarm', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    silenceAlarmClient();
+                    fetchLogs();
+                }
+            } catch (err) {
+                console.error("Failed to reset alarm:", err);
+            }
+        });
+
+        // Snapshot manual handler
+        btnTakeShot.addEventListener('click', () => {
+            if (!isStreaming) {
+                alert("Please start the camera monitor first!");
+                return;
+            }
+            // Canvas has the annotated frame rendered
+            const link = document.createElement('a');
+            link.download = `ddd_screenshot_${Date.now()}.jpg`;
+            link.href = cameraCanvas.toDataURL('image/jpeg');
+            link.click();
+        });
+
+        // Logs Display handler
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/get_logs');
+                const logs = await res.json();
+                
+                if (logs.error) {
+                    logsContainer.innerHTML = `<div class="no-data-msg">Error loading logs: ${logs.error}</div>`;
+                    return;
+                }
+
+                if (logs.length === 0) {
+                    logsContainer.innerHTML = `<div class="no-data-msg">No logs recorded yet.</div>`;
+                    return;
+                }
+
+                // Render list
+                logsContainer.innerHTML = '';
+                // Show latest logs first
+                logs.reverse().forEach(log => {
+                    const isDrowsy = log.Prediction === "Drowsy";
+                    const item = document.createElement('div');
+                    item.className = `history-item ${isDrowsy ? 'drowsy' : ''}`;
+                    
+                    item.innerHTML = `
+                        <div class="history-item-info">
+                            <h4>${log.Prediction === "Drowsy" ? "DROWSY WARNING" : "STATE OK"}</h4>
+                            <p>${log.Date} at ${log.Time}</p>
+                        </div>
+                        <span class="history-item-score ${isDrowsy ? 'drowsy' : 'active'}">${log.Confidence}</span>
+                    `;
+                    logsContainer.appendChild(item);
+                });
+            } catch (err) {
+                logsContainer.innerHTML = `<div class="no-data-msg">Failed to load logs.</div>`;
+            }
+        }
+
+        btnRefreshLogs.addEventListener('click', fetchLogs);
+
+        // Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            fetchSettings();
+            fetchLogs();
+        });
+    </script>
+</body>
+</html>

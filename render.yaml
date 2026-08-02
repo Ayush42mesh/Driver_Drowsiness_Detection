@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: driver-drowsiness-detection
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn web_app:app"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.10.13
