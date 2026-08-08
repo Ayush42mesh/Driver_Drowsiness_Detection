@@ -30,7 +30,7 @@ ChartJS.register(
 );
 
 // Dynamic backend API URL fallback based on environment
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? "/api" : "http://127.0.0.1:5000");
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? "" : "http://127.0.0.1:5000");
 
 export default function App() {
   // Streaming and Webcam States

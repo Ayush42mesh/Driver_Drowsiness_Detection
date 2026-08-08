@@ -12,7 +12,10 @@ from model_loader import ModelLoader
 from face_detector import FaceDetector
 from predictor import DrowsinessPredictor
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            static_folder=os.path.join('frontend', 'dist'), 
+            static_url_path='/',
+            template_folder=os.path.join('frontend', 'dist'))
 
 # Initialize configurations and sub-systems
 config = Config()
