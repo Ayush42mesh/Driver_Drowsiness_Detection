@@ -23,6 +23,22 @@ class ModelLoader:
         Attempts to load the model file from model_path.
         Returns (success, message).
         """
+        # Check if tensorflow is available
+        try:
+            import tensorflow as tf
+            tf_available = True
+        except ImportError:
+            tf_available = False
+
+        # If TF is not available, try to redirect to ONNX model if possible
+        if not tf_available and model_path.endswith(".keras"):
+            onnx_path = model_path.replace(".keras", ".onnx")
+            if os.path.exists(onnx_path):
+                print(f"TensorFlow not available. Redirecting to ONNX model at {onnx_path}")
+                model_path = onnx_path
+            else:
+                print("TensorFlow not available and ONNX model not found. Fallback to demo mode.")
+
         # If the file does not exist, check if there's an .onnx version instead
         if not os.path.exists(model_path):
             onnx_path = model_path.replace(".keras", ".onnx")

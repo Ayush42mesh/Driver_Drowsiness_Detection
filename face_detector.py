@@ -34,12 +34,30 @@ class FaceDetector:
 
         # Fallback to OpenCV Haar Cascade
         try:
-            self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            import os
+            cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+            self.face_cascade = cv2.CascadeClassifier(cascade_path)
+            
+            if self.face_cascade.empty():
+                # Try local file
+                local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model")
+                os.makedirs(local_dir, exist_ok=True)
+                local_path = os.path.join(local_dir, "haarcascade_frontalface_default.xml")
+                
+                if not os.path.exists(local_path):
+                    print("Haar Cascade XML not found. Downloading fallback from OpenCV repository...")
+                    import urllib.request
+                    url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml"
+                    urllib.request.urlretrieve(url, local_path)
+                    print("Download complete.")
+                
+                self.face_cascade = cv2.CascadeClassifier(local_path)
+                
             if not self.face_cascade.empty():
                 self.use_opencv = True
                 print("OpenCV Haar Cascade Face Detector initialized as fallback.")
             else:
-                print("Warning: Haar Cascade XML file not found. Face detection will not function.")
+                print("Warning: Haar Cascade XML file could not be loaded. Face detection will not function.")
         except Exception as e:
             print(f"Error initializing OpenCV Face Detector: {e}")
 
