@@ -1,0 +1,21 @@
+# Python virtual environments & packages
+venv/
+.venv/
+env/
+ENV/
+*.pyc
+__pycache__/
+
+# Frontend build & dependencies
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Local configurations and state files
+settings.json
+logs/
+screenshots/
+
+# System files
+.DS_Store
+Thumbs.db
